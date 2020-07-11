@@ -6,8 +6,8 @@ on:
   pull_request:
 
 jobs:
-  rustfmt:
-    name: rustfmt
+  format:
+    name: format
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -27,8 +27,8 @@ jobs:
         # TODO: change to `cargo fmt --check` after rustfmt 2.0 release
         run: cargo fmt -- --check
 
-  clippy:
-    name: clippy
+  lint:
+    name: lint
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
