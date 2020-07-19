@@ -34,7 +34,7 @@ async fn route(req: Request<Body>) -> Result<Response<Body>, GenericServerError>
 pub(crate) async fn start_server(socket_addr: SocketAddr) -> Result<(), GenericServerError> {
     Server::bind(&socket_addr)
         .serve(make_service_fn(move |_| async {
-            Ok::<_, GenericServerError>(service_fn(|req| route(req)))
+            Ok::<_, GenericServerError>(service_fn(route))
         }))
         .await?;
     Ok(())
