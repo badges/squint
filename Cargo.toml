@@ -7,3 +7,6 @@ publish = false
 license = "Apache-2.0 or MIT"
 
 [dependencies]
+hyper = "0.13.7"
+tokio = { version = "0.2.21", features = ["macros", "rt-threaded"] }
+lazy_static = "1.4.0"
