@@ -1,4 +1,4 @@
-use super::{convert_svg_to_png, SvgToPngConversion};
+use super::convert_svg_to_png;
 use crate::badge::BadgeStyle;
 
 pub static INVALID_SVG: &[u8] = br##"<?xml version="1.0" encoding="UTF-8"?>
@@ -26,13 +26,13 @@ pub static INVALID_SVG: &[u8] = br##"<?xml version="1.0" encoding="UTF-8"?>
 lazy_static! {
     pub static ref INVALID_SVG_BADGE: Vec<u8> = {
         match convert_svg_to_png(None, BadgeStyle::Unspecified) {
-            SvgToPngConversion::Failure => {
+            Ok(png) => png,
+            Err(_) => {
                 // This happens during server initialization, so if it fails
                 // then we may as well crash, and crash loudly, as the server
                 // won't be able to rasterize anything.
                 panic!("Fatal error creating error response badge");
             }
-            SvgToPngConversion::Success(png) => png,
         }
     };
 }

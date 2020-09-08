@@ -6,7 +6,7 @@ use std::net::SocketAddr;
 use url::form_urlencoded;
 
 use crate::badge::BadgeStyle;
-use crate::graphics::{convert_svg_to_png, SvgToPngConversion, INVALID_SVG_BADGE};
+use crate::graphics::{convert_svg_to_png, INVALID_SVG_BADGE};
 
 pub type GenericServerError = Box<dyn std::error::Error + Send + Sync>;
 
@@ -100,8 +100,8 @@ async fn rasterize(
     }
 
     let (png_stream, res_status) = match convert_svg_to_png(Some(svg_bytes), badge_style) {
-        SvgToPngConversion::Success(png_stream) => (png_stream, 200),
-        SvgToPngConversion::Failure => (INVALID_SVG_BADGE.to_owned(), 502),
+        Ok(png_stream) => (png_stream, 200),
+        Err(_) => (INVALID_SVG_BADGE.to_owned(), 502),
     };
 
     res.status(res_status).body(Body::from(png_stream))

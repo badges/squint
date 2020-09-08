@@ -1,4 +1,4 @@
-#[derive(std::fmt::Debug)]
+#[derive(std::fmt::Debug, std::cmp::PartialEq)]
 pub enum BadgeStyle {
     Flat,
     FlatSquare,
