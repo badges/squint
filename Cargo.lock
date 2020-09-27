@@ -1376,6 +1376,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "quick-xml"
+version = "0.18.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3cc440ee4802a86e357165021e3e255a9143724da31db1e2ea540214c96a0f82"
+dependencies = [
+ "memchr",
+]
+
+[[package]]
 name = "quote"
 version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1792,6 +1801,7 @@ dependencies = [
  "lazy_static",
  "librsvg",
  "mockall",
+ "quick-xml",
  "reqwest",
  "tokio",
  "url",

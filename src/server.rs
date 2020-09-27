@@ -10,7 +10,8 @@ use crate::graphics::{convert_svg_to_png, INVALID_SVG_BADGE};
 
 pub type GenericServerError = Box<dyn std::error::Error + Send + Sync>;
 
-const SVG_BASE_URL: &str = "https://img.shields.io";
+// const SVG_BASE_URL: &str = "https://img.shields.io";
+const SVG_BASE_URL: &str = "https://shields-staging-pr-5754.herokuapp.com";
 const HEALTH_CHECK_BODY: &str = concat!(
     r#"{"status":"pass","version":""#,
     env!("CARGO_PKG_VERSION"),

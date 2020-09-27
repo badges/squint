@@ -1,4 +1,4 @@
-use super::{LetterSpacer, INVALID_SVG};
+use super::{SvgProcessor, INVALID_SVG};
 use crate::badge::BadgeStyle;
 
 // Module below used for importing these to support mocking
@@ -11,36 +11,13 @@ use librsvg::IntrinsicDimensions;
 
 pub enum SvgToPngConversionError {
     ImageSurfaceCreationFailure,
+    SvgBytesProcessingFailure,
     SvgHandleCreationFailure,
     SvgRenderingError,
     PngCreationError,
 }
 
-impl From<librsvg::LoadingError> for SvgToPngConversionError {
-    fn from(_e: librsvg::LoadingError) -> SvgToPngConversionError {
-        SvgToPngConversionError::SvgHandleCreationFailure
-    }
-}
-
-impl From<cairo::Status> for SvgToPngConversionError {
-    fn from(_e: cairo::Status) -> SvgToPngConversionError {
-        SvgToPngConversionError::ImageSurfaceCreationFailure
-    }
-}
-
-impl From<librsvg::RenderingError> for SvgToPngConversionError {
-    fn from(_e: librsvg::RenderingError) -> SvgToPngConversionError {
-        SvgToPngConversionError::SvgRenderingError
-    }
-}
-
-impl From<cairo::IoError> for SvgToPngConversionError {
-    fn from(_e: cairo::IoError) -> SvgToPngConversionError {
-        SvgToPngConversionError::PngCreationError
-    }
-}
-
-// (width, height)
+// Returns tuple with (width, height)
 fn get_dimensions(renderer: &CairoRenderer) -> (f64, f64) {
     let IntrinsicDimensions {
         width: width_dim,
@@ -53,22 +30,28 @@ fn get_dimensions(renderer: &CairoRenderer) -> (f64, f64) {
     (width, height)
 }
 
-pub(super) fn convert_svg_to_png<L: LetterSpacer>(
+pub(super) fn convert_svg_to_png<S: SvgProcessor>(
     svg_bytes: Option<Vec<u8>>,
-    _badge_style: BadgeStyle,
-    _letter_spacer: L,
+    badge_style: BadgeStyle,
+    svg_processor: S,
 ) -> Result<Vec<u8>, SvgToPngConversionError> {
     let bytes_stream = match svg_bytes {
-        Some(b) => Bytes::from_owned(b),
+        Some(b) => Bytes::from_owned(
+            svg_processor
+                .prepare_svg_for_png_conversion(b, &badge_style)
+                .map_err(|_| SvgToPngConversionError::SvgBytesProcessingFailure)?,
+        ),
         None => Bytes::from_static(INVALID_SVG),
     };
     let stream = MemoryInputStream::new_from_bytes(&bytes_stream);
-    let handle =
-        Loader::new().read_stream(&stream, None::<&gio::File>, None::<&gio::Cancellable>)?;
+    let handle = Loader::new()
+        .read_stream(&stream, None::<&gio::File>, None::<&gio::Cancellable>)
+        .map_err(|_| SvgToPngConversionError::SvgHandleCreationFailure)?;
 
     let renderer = CairoRenderer::new(&handle);
     let (width, height) = get_dimensions(&renderer);
-    let surface = ImageSurface::create(cairo::Format::ARgb32, width as i32, height as i32)?;
+    let surface = ImageSurface::create(cairo::Format::ARgb32, width as i32, height as i32)
+        .map_err(|_| SvgToPngConversionError::ImageSurfaceCreationFailure)?;
 
     let context = Context::new(&surface);
     let cr = Rectangle {
@@ -77,10 +60,14 @@ pub(super) fn convert_svg_to_png<L: LetterSpacer>(
         width,
         height,
     };
-    renderer.render_document(&context, &cr)?;
+    renderer
+        .render_document(&context, &cr)
+        .map_err(|_| SvgToPngConversionError::SvgRenderingError)?;
 
     let mut png_stream = Vec::new();
-    surface.write_to_png(&mut png_stream)?;
+    surface
+        .write_to_png(&mut png_stream)
+        .map_err(|_| SvgToPngConversionError::PngCreationError)?;
 
     Ok(png_stream)
 }
