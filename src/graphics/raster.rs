@@ -9,6 +9,7 @@ use gio::MemoryInputStream;
 use glib::Bytes;
 use librsvg::IntrinsicDimensions;
 
+#[derive(std::fmt::Debug, std::cmp::PartialEq)]
 pub enum SvgToPngConversionError {
     ImageSurfaceCreationFailure,
     SvgBytesProcessingFailure,
@@ -30,20 +31,31 @@ fn get_dimensions(renderer: &CairoRenderer) -> (f64, f64) {
     (width, height)
 }
 
+fn get_bytes_stream<S: SvgProcessor>(
+    svg_bytes: Option<Vec<u8>>,
+    badge_style: &BadgeStyle,
+    svg_processor: &S,
+) -> Result<Bytes, SvgToPngConversionError> {
+    match svg_bytes {
+        Some(b) => Ok(Bytes::from_owned(
+            svg_processor
+                .prepare_svg_for_png_conversion(b, &badge_style)
+                .map_err(|_| SvgToPngConversionError::SvgBytesProcessingFailure)?,
+        )),
+        None => Ok(Bytes::from_static(INVALID_SVG)),
+    }
+}
+
 pub(super) fn convert_svg_to_png<S: SvgProcessor>(
     svg_bytes: Option<Vec<u8>>,
     badge_style: BadgeStyle,
     svg_processor: S,
 ) -> Result<Vec<u8>, SvgToPngConversionError> {
-    let bytes_stream = match svg_bytes {
-        Some(b) => Bytes::from_owned(
-            svg_processor
-                .prepare_svg_for_png_conversion(b, &badge_style)
-                .map_err(|_| SvgToPngConversionError::SvgBytesProcessingFailure)?,
-        ),
-        None => Bytes::from_static(INVALID_SVG),
-    };
-    let stream = MemoryInputStream::new_from_bytes(&bytes_stream);
+    let stream = MemoryInputStream::new_from_bytes(&get_bytes_stream(
+        svg_bytes,
+        &badge_style,
+        &svg_processor,
+    )?);
     let handle = Loader::new()
         .read_stream(&stream, None::<&gio::File>, None::<&gio::Cancellable>)
         .map_err(|_| SvgToPngConversionError::SvgHandleCreationFailure)?;

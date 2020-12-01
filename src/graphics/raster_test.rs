@@ -1,3 +1,5 @@
+use super::super::svg::MockSvgProcessor;
+use super::super::test_data::{LETTER_SPACING_TEST_BYTES, TEST_BYTES};
 use super::*;
 
 #[cfg(test)]
@@ -57,5 +59,66 @@ mod get_dimensions_tests {
         let (width, height) = get_dimensions(&mock_renderer);
         assert_eq!(width, 0f64);
         assert_eq!(height, exp_height);
+    }
+}
+
+#[cfg(test)]
+mod get_bytes_stream_tests {
+    use super::{
+        get_bytes_stream, BadgeStyle, Bytes, MockSvgProcessor, SvgToPngConversionError,
+        INVALID_SVG, LETTER_SPACING_TEST_BYTES, TEST_BYTES,
+    };
+    use mockall::predicate::*;
+
+    #[test]
+    fn returns_static_invalid_svg_on_none() {
+        let mut mock_svg_processor = MockSvgProcessor::new();
+        mock_svg_processor
+            .expect_prepare_svg_for_png_conversion()
+            .with(eq(INVALID_SVG.to_owned()), eq(&BadgeStyle::Unspecified))
+            .times(0)
+            .returning(|_, _| Err(()));
+        assert_eq!(
+            Bytes::from_static(INVALID_SVG),
+            get_bytes_stream(None, &BadgeStyle::Unspecified, &mock_svg_processor).unwrap(),
+        );
+    }
+
+    #[test]
+    fn maps_processing_error_correctly() {
+        let mut mock_svg_processor = MockSvgProcessor::new();
+        mock_svg_processor
+            .expect_prepare_svg_for_png_conversion()
+            .with(eq(TEST_BYTES.to_owned()), eq(&BadgeStyle::Unspecified))
+            .times(1)
+            .returning(|_, _| Err(()));
+        assert_eq!(
+            SvgToPngConversionError::SvgBytesProcessingFailure,
+            get_bytes_stream(
+                Some(TEST_BYTES.to_owned()),
+                &BadgeStyle::Unspecified,
+                &mock_svg_processor
+            )
+            .unwrap_err(),
+        );
+    }
+
+    #[test]
+    fn returns_owned_bytes_on_successful_conversion() {
+        let mut mock_svg_processor = MockSvgProcessor::new();
+        mock_svg_processor
+            .expect_prepare_svg_for_png_conversion()
+            .with(eq(TEST_BYTES.to_owned()), eq(&BadgeStyle::Unspecified))
+            .times(1)
+            .returning(|_, _| Ok(LETTER_SPACING_TEST_BYTES.to_owned()));
+        assert_eq!(
+            Bytes::from_owned(LETTER_SPACING_TEST_BYTES),
+            get_bytes_stream(
+                Some(TEST_BYTES.to_owned()),
+                &BadgeStyle::Unspecified,
+                &mock_svg_processor
+            )
+            .unwrap(),
+        );
     }
 }

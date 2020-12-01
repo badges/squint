@@ -5,6 +5,9 @@ use quick_xml::events::{BytesStart, Event};
 use quick_xml::{Reader, Writer};
 use std::io::Cursor;
 
+#[cfg(test)]
+use mockall::automock;
+
 pub static INVALID_SVG: &[u8] = br##"<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="160" height="20">
     <linearGradient id="b" x2="0" y2="100%">
@@ -40,8 +43,8 @@ lazy_static! {
         }
     };
 }
-
 /// Various utility methods for processing SVGs.
+#[cfg_attr(test, automock)]
 pub(super) trait SvgProcessor {
     /// Performs preprocessing of an SVG in preparation
     /// for converting the SVG to a PNG.
