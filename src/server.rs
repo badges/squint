@@ -100,8 +100,7 @@ async fn rasterize(
     let (svg_res_headers, svg_status, svg_bytes, badge_style) =
         match get_svg(req, http_client, svg_base_url).await {
             Ok((headers, status, data, style)) => (headers, status, data, style),
-            Err(e) => {
-                eprintln!("Failed to convert SVG to PNG. Details: {:?}", e);
+            Err(_) => {
                 return Response::builder()
                     .status(502)
                     .body(Body::from(INVALID_SVG_BADGE.to_owned()));
