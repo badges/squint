@@ -62,17 +62,33 @@ async fn get_svg(
         }
     }
 
+    // NB: We're currently creating an owned byte vector of the response body,
+    // which does involve copying those bytes into a new vector.
+    //
+    // This is done because we ultimately end up needing ownership of the
+    // bytes in order to use the canonical API surface of the libs used
+    // in the SVG --> PNG conversion.
+    //
+    // There __could__ potentially be some options to avoid this, at least in
+    // most cases, but it doesn't make sense to do so at this time
+    // given the effort/complexity vs. reward/benefit tradeoffs.
     match http_client.get(&svg_url).headers(headers).send().await {
         Ok(res) => {
             let headers = res.headers().to_owned();
             let status = res.status().as_u16();
             let bytes = match res.bytes().await {
                 Ok(b) => b,
-                Err(_) => return Err(()),
+                Err(e) => {
+                    eprintln!("Failed to get SVG response body bytes. Details: {:?}", e);
+                    return Err(());
+                }
             };
             Ok((headers, status, bytes.to_vec(), badge_style))
         }
-        Err(_) => Err(()),
+        Err(e) => {
+            eprintln!("Failed to fetch SVG data. Details: {:?}", e);
+            Err(())
+        }
     }
 }
 
@@ -82,9 +98,19 @@ async fn rasterize(
     svg_base_url: &'static str,
 ) -> Result<Response<Body>, hyper::http::Error> {
     let (svg_res_headers, svg_status, svg_bytes, badge_style) =
-        get_svg(req, http_client, svg_base_url).await.unwrap();
+        match get_svg(req, http_client, svg_base_url).await {
+            Ok((headers, status, data, style)) => (headers, status, data, style),
+            Err(e) => {
+                eprintln!("Failed to convert SVG to PNG. Details: {:?}", e);
+                return Response::builder()
+                    .status(502)
+                    .body(Body::from(INVALID_SVG_BADGE.to_owned()));
+            }
+        };
 
     let mut res = Response::builder().header(CONTENT_TYPE, "image/png");
+    // Unwrapping should be fine here as there's nothing in the preceding response
+    // builder that could introduce errors.
     let res_headers = res.headers_mut().unwrap();
     for header in FORWARDING_RESPONSE_HEADERS.iter() {
         if svg_res_headers.contains_key(HeaderName::from_static(header)) {
@@ -96,12 +122,15 @@ async fn rasterize(
     }
 
     if svg_status == 304 {
-        return Ok(res.status(304).body(Body::empty()).unwrap());
+        return res.status(304).body(Body::empty());
     }
 
     let (png_stream, res_status) = match convert_svg_to_png(Some(svg_bytes), badge_style) {
         Ok(png_stream) => (png_stream, 200),
-        Err(_) => (INVALID_SVG_BADGE.to_owned(), 502),
+        Err(e) => {
+            eprintln!("Failed to convert SVG to PNG. Details: {:?}", e);
+            (INVALID_SVG_BADGE.to_owned(), 502)
+        }
     };
 
     res.status(res_status).body(Body::from(png_stream))
