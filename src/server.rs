@@ -10,8 +10,6 @@ use crate::graphics::{convert_svg_to_png, INVALID_SVG_BADGE};
 
 pub type GenericServerError = Box<dyn std::error::Error + Send + Sync>;
 
-// const SVG_BASE_URL: &str = "https://img.shields.io";
-const SVG_BASE_URL: &str = "https://shields-staging-pr-5754.herokuapp.com";
 const HEALTH_CHECK_BODY: &str = concat!(
     r#"{"status":"pass","version":""#,
     env!("CARGO_PKG_VERSION"),
@@ -19,7 +17,6 @@ const HEALTH_CHECK_BODY: &str = concat!(
 );
 const FORWARDING_REQUEST_HEADERS: &[&str] =
     &["if-modified-since", "if-unmodified-since", "if-none-match"];
-
 const FORWARDING_RESPONSE_HEADERS: &[&str] = &["date", "cache-control", "expires", "last-modified"];
 
 fn get_badge_style(req: &Request<Body>) -> BadgeStyle {
@@ -45,6 +42,7 @@ fn get_badge_style(req: &Request<Body>) -> BadgeStyle {
 async fn get_svg(
     req: Request<Body>,
     http_client: Client,
+    svg_base_url: &'static str,
 ) -> Result<(HeaderMap, u16, Vec<u8>, BadgeStyle), ()> {
     let suffix = if let Some(path_and_query) = req.uri().path_and_query() {
         path_and_query.as_str().replace(".png", ".svg")
@@ -53,7 +51,7 @@ async fn get_svg(
     };
     let badge_style = get_badge_style(&req);
 
-    let svg_url = format!("{}{}", SVG_BASE_URL, suffix);
+    let svg_url = format!("{}{}", svg_base_url, suffix);
     let mut headers = HeaderMap::new();
     for header in FORWARDING_REQUEST_HEADERS.iter() {
         if req.headers().contains_key(HeaderName::from_static(header)) {
@@ -81,9 +79,10 @@ async fn get_svg(
 async fn rasterize(
     req: Request<Body>,
     http_client: Client,
+    svg_base_url: &'static str,
 ) -> Result<Response<Body>, hyper::http::Error> {
     let (svg_res_headers, svg_status, svg_bytes, badge_style) =
-        get_svg(req, http_client).await.unwrap();
+        get_svg(req, http_client, svg_base_url).await.unwrap();
 
     let mut res = Response::builder().header(CONTENT_TYPE, "image/png");
     let res_headers = res.headers_mut().unwrap();
@@ -111,11 +110,12 @@ async fn rasterize(
 async fn route(
     req: Request<Body>,
     http_client: Client,
+    svg_base_url: &'static str,
 ) -> Result<Response<Body>, hyper::http::Error> {
     match (req.method(), req.uri().path()) {
         (&Method::GET, "/") => Response::builder()
             .status(301)
-            .header(hyper::header::LOCATION, SVG_BASE_URL)
+            .header(hyper::header::LOCATION, svg_base_url)
             .body(Body::empty()),
         // TODO: This should probably incorporate a check of connectivity to the upstream SVG provider
         // https://tools.ietf.org/html/draft-inadarei-api-health-check-03#section-3
@@ -123,20 +123,25 @@ async fn route(
             .status(200)
             .header(hyper::header::CONTENT_TYPE, "application/json")
             .body(Body::from(HEALTH_CHECK_BODY)),
-        (&Method::GET, _) => rasterize(req, http_client.to_owned()).await,
+        (&Method::GET, _) => rasterize(req, http_client.to_owned(), svg_base_url).await,
         // GET is the only supported HTTP Verb at this time, and a GET request with an invalid badge route
         // will be handled by the above arm with a 404 response code. This arm just handles unsupported verbs.
         (_, _) => Response::builder().status(405).body(Body::empty()),
     }
 }
 
-pub(crate) async fn start_server(socket_addr: SocketAddr) -> Result<(), GenericServerError> {
+pub(crate) async fn start_server(
+    socket_addr: SocketAddr,
+    svg_base_url: &'static str,
+) -> Result<(), GenericServerError> {
     let client = Client::new();
     Server::bind(&socket_addr)
         .serve(make_service_fn(move |_| {
             let client = client.clone();
-            async {
-                Ok::<_, GenericServerError>(service_fn(move |req| route(req, client.to_owned())))
+            async move {
+                Ok::<_, GenericServerError>(service_fn(move |req| {
+                    route(req, client.to_owned(), svg_base_url)
+                }))
             }
         }))
         .await?;

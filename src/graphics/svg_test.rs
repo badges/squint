@@ -13,7 +13,8 @@ mod letter_spacing_svg_processor_tests {
                 TEST_BYTES,
                 LetterSpacingSvgProcessor::new()
                     .prepare_svg_for_png_conversion(TEST_BYTES.to_owned(), style)
-                    .unwrap(),
+                    .unwrap()
+                    .as_slice(),
             )
         }
 
