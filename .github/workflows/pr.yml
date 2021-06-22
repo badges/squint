@@ -41,6 +41,9 @@ jobs:
           toolchain: stable
           override: true
 
+      - name: Install tools
+        run: sudo apt update && sudo apt install libgtk-3-dev -y
+
       - name: Add clippy
         run: rustup component add clippy
 
@@ -60,6 +63,9 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
+
+      - name: Install tools
+        run: sudo apt update && sudo apt install libgtk-3-dev -y
 
       # TODO: incorporate code coverage with tarpaulin or grcov
       - name: Run tests
@@ -81,6 +87,9 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
+
+      - name: Install tools
+        run: sudo apt update && sudo apt install libgtk-3-dev -y
 
       - name: Compile
         uses: actions-rs/cargo@v1

@@ -1,7 +1,7 @@
 ARG SERVER_BINARY_NAME=squint
 ARG CARGO_BUILD_MODE=debug
 
-FROM rust:1.43.1 as builder
+FROM rust:1.48.0 as builder
 ARG SERVER_BINARY_NAME
 ARG CARGO_BUILD_MODE
 
@@ -32,10 +32,14 @@ RUN ./reset.sh ${CARGO_BUILD_MODE} ${SERVER_BINARY_NAME}
 COPY . .
 RUN ./build.sh ${CARGO_BUILD_MODE}
 
-FROM rust:1.43.1-slim
+FROM ubuntu:focal
 ARG SERVER_BINARY_NAME
 ARG CARGO_BUILD_MODE
 ENV SERVER_BINARY_NAME=${SERVER_BINARY_NAME}
-RUN apt update && apt install -y libgtk-3-dev
+
+RUN echo "ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true" | debconf-set-selections
+RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections
+RUN apt update -y && apt install -y libgtk-3-dev ttf-mscorefonts-installer
+
 COPY --from=builder /usr/src/${SERVER_BINARY_NAME}/target/${CARGO_BUILD_MODE}/${SERVER_BINARY_NAME} /usr/local/bin/${SERVER_BINARY_NAME}
 CMD ["sh", "-c", "$SERVER_BINARY_NAME"]
