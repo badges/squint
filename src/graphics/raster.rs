@@ -39,7 +39,7 @@ fn get_bytes_stream<S: SvgProcessor>(
     match svg_bytes {
         Some(b) => Ok(Bytes::from_owned(
             svg_processor
-                .prepare_svg_for_png_conversion(b, &badge_style)
+                .prepare_svg_for_png_conversion(b, badge_style)
                 .map_err(|_| SvgToPngConversionError::SvgBytesProcessingFailure)?,
         )),
         None => Ok(Bytes::from_static(INVALID_SVG)),
