@@ -2,11 +2,12 @@ use hyper::header::{HeaderMap, HeaderName, CONTENT_TYPE};
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Method, Request, Response, Server};
 use reqwest::Client;
+use std::borrow::Cow;
 use std::net::SocketAddr;
 use url::form_urlencoded;
 
 use crate::badge::BadgeStyle;
-use crate::graphics::{convert_svg_to_png, INVALID_SVG_BADGE};
+use crate::graphics::convert_svg_to_png;
 
 pub type GenericServerError = Box<dyn std::error::Error + Send + Sync>;
 
@@ -40,25 +41,23 @@ fn get_badge_style(req: &Request<Body>) -> BadgeStyle {
 }
 
 async fn get_svg(
-    req: Request<Body>,
+    mut req: Request<Body>,
     http_client: Client,
     svg_base_url: &'static str,
 ) -> Result<(HeaderMap, u16, Vec<u8>, BadgeStyle), ()> {
-    let suffix = if let Some(path_and_query) = req.uri().path_and_query() {
-        path_and_query.as_str().replace(".png", ".svg")
+    let svg_url = if let Some(path_and_query) = req.uri().path_and_query() {
+        let suffix = path_and_query.as_str().replace(".png", ".svg");
+        Cow::Owned(format!("{}{}", svg_base_url, suffix))
     } else {
-        "".to_owned()
+        Cow::Borrowed(svg_base_url)
     };
-    let badge_style = get_badge_style(&req);
 
-    let svg_url = format!("{}{}", svg_base_url, suffix);
     let mut headers = HeaderMap::new();
+    let req_headers = req.headers_mut();
     for header in FORWARDING_REQUEST_HEADERS.iter() {
-        if req.headers().contains_key(HeaderName::from_static(header)) {
-            headers.insert(
-                HeaderName::from_static(header),
-                req.headers()[*header].to_owned(),
-            );
+        let h = HeaderName::from_static(header);
+        if let Some(v) = req_headers.remove(&h) {
+            headers.append(h, v);
         }
     }
 
@@ -72,7 +71,7 @@ async fn get_svg(
     // There __could__ potentially be some options to avoid this, at least in
     // most cases, but it doesn't make sense to do so at this time
     // given the effort/complexity vs. reward/benefit tradeoffs.
-    match http_client.get(&svg_url).headers(headers).send().await {
+    match http_client.get(&*svg_url).headers(headers).send().await {
         Ok(res) => {
             let headers = res.headers().to_owned();
             let status = res.status().as_u16();
@@ -83,7 +82,7 @@ async fn get_svg(
                     return Err(());
                 }
             };
-            Ok((headers, status, bytes.to_vec(), badge_style))
+            Ok((headers, status, bytes.to_vec(), get_badge_style(&req)))
         }
         Err(e) => {
             eprintln!("Failed to fetch SVG data. Details: {:?}", e);
@@ -96,14 +95,15 @@ async fn rasterize(
     req: Request<Body>,
     http_client: Client,
     svg_base_url: &'static str,
+    invalid_svg_badge: &'static [u8],
 ) -> Result<Response<Body>, hyper::http::Error> {
-    let (svg_res_headers, svg_status, svg_bytes, badge_style) =
+    let (mut svg_res_headers, svg_status, svg_bytes, badge_style) =
         match get_svg(req, http_client, svg_base_url).await {
             Ok((headers, status, data, style)) => (headers, status, data, style),
             Err(_) => {
                 return Response::builder()
                     .status(502)
-                    .body(Body::from(INVALID_SVG_BADGE.to_owned()));
+                    .body(Body::from(invalid_svg_badge));
             }
         };
 
@@ -112,11 +112,9 @@ async fn rasterize(
     // builder that could introduce errors.
     let res_headers = res.headers_mut().unwrap();
     for header in FORWARDING_RESPONSE_HEADERS.iter() {
-        if svg_res_headers.contains_key(HeaderName::from_static(header)) {
-            res_headers.append(
-                HeaderName::from_static(header),
-                svg_res_headers[*header].to_owned(),
-            );
+        let h = HeaderName::from_static(header);
+        if let Some(v) = svg_res_headers.remove(&h) {
+            res_headers.append(h, v);
         }
     }
 
@@ -125,10 +123,10 @@ async fn rasterize(
     }
 
     let (png_stream, res_status) = match convert_svg_to_png(Some(svg_bytes), badge_style) {
-        Ok(png_stream) => (png_stream, 200),
+        Ok(png_stream) => (Cow::Owned(png_stream), 200),
         Err(e) => {
             eprintln!("Failed to convert SVG to PNG. Details: {:?}", e);
-            (INVALID_SVG_BADGE.to_owned(), 502)
+            (Cow::Borrowed(invalid_svg_badge), 502)
         }
     };
 
@@ -139,6 +137,7 @@ async fn route(
     req: Request<Body>,
     http_client: Client,
     svg_base_url: &'static str,
+    invalid_svg_badge: &'static [u8],
 ) -> Result<Response<Body>, hyper::http::Error> {
     match (req.method(), req.uri().path()) {
         (&Method::GET, "/") => Response::builder()
@@ -151,7 +150,7 @@ async fn route(
             .status(200)
             .header(hyper::header::CONTENT_TYPE, "application/json")
             .body(Body::from(HEALTH_CHECK_BODY)),
-        (&Method::GET, _) => rasterize(req, http_client.to_owned(), svg_base_url).await,
+        (&Method::GET, _) => rasterize(req, http_client, svg_base_url, invalid_svg_badge).await,
         // GET is the only supported HTTP Verb at this time, and a GET request with an invalid badge route
         // will be handled by the above arm with a 404 response code. This arm just handles unsupported verbs.
         (_, _) => Response::builder().status(405).body(Body::empty()),
@@ -161,6 +160,7 @@ async fn route(
 pub(crate) async fn start_server(
     socket_addr: SocketAddr,
     svg_base_url: &'static str,
+    invalid_svg_badge: &'static [u8],
 ) -> Result<(), GenericServerError> {
     let client = Client::new();
     Server::bind(&socket_addr)
@@ -168,7 +168,7 @@ pub(crate) async fn start_server(
             let client = client.clone();
             async move {
                 Ok::<_, GenericServerError>(service_fn(move |req| {
-                    route(req, client.to_owned(), svg_base_url)
+                    route(req, client.to_owned(), svg_base_url, invalid_svg_badge)
                 }))
             }
         }))

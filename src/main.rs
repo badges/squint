@@ -20,6 +20,6 @@ async fn main() -> Result<(), GenericServerError> {
     let port =
         std::env::var("PORT").map_or(DEFAULT_PORT, |p| p.parse::<u16>().unwrap_or(DEFAULT_PORT));
     let socket_address: std::net::SocketAddr = ([0, 0, 0, 0], port).into();
-    start_server(socket_address, &SVG_BASE_URL).await?;
+    start_server(socket_address, &SVG_BASE_URL, INVALID_SVG_BADGE.as_slice()).await?;
     Ok(())
 }

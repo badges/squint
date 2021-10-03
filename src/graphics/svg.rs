@@ -1,6 +1,5 @@
 use super::convert_svg_to_png;
 use crate::badge::BadgeStyle;
-use quick_xml::events::attributes::Attribute;
 use quick_xml::events::{BytesStart, Event};
 use quick_xml::{Reader, Writer};
 use std::io::Cursor;
@@ -70,23 +69,19 @@ impl LetterSpacingSvgProcessor {
         let mut writer = Writer::new(Cursor::new(Vec::new()));
         let mut buf = Vec::new();
         // TODO - insert link to Shields.io source where this is set
-        let letter_spacing = 12.5;
+        let letter_spacing = "12.5";
 
         loop {
             let event = reader.read_event(&mut buf).map_err(|_| ())?;
             match event {
                 Event::Start(ref e) if e.name() == b"text" => {
-                    let mut elem = BytesStart::owned(b"text".to_vec(), "text".len());
+                    let mut elem = BytesStart::borrowed(b"text", "text".len());
                     let attrs = e
                         .attributes()
-                        .filter_map(|a| match a {
-                            Ok(Attribute { key, .. }) if key == b"textLength" => None,
-                            Ok(a) => Some(a),
-                            _ => None,
-                        })
+                        .filter_map(|a| a.ok().filter(|a| a.key != b"textLength"))
                         .collect::<Vec<_>>();
                     elem.extend_attributes(attrs);
-                    elem.push_attribute(("letter-spacing", &*letter_spacing.to_string()));
+                    elem.push_attribute(("letter-spacing", letter_spacing));
                     writer.write_event(Event::Start(elem)).map_err(|_| ())?;
                 }
                 Event::Eof => break,
