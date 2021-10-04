@@ -17,7 +17,7 @@ librsvg = { git = "https://gitlab.gnome.org/GNOME/librsvg" }
 quick-xml = "0.18.1"
 reqwest = { version = "0.10.7", features = ["default-tls"] }
 tokio = { version = "0.2.21", features = ["macros", "rt-threaded"] }
-url = "2.1.1"
+url = "2.2.2"
 
 [dev-dependencies]
 mockall = "0.8.3"
