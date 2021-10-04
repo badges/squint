@@ -20,4 +20,4 @@ tokio = { version = "0.2.21", features = ["macros", "rt-threaded"] }
 url = "2.2.2"
 
 [dev-dependencies]
-mockall = "0.8.3"
+mockall = "0.10.2"
