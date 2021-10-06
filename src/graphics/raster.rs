@@ -5,12 +5,13 @@ use crate::badge::BadgeStyle;
 // for tests
 use self::librsvg_imports::{CairoRenderer, Loader};
 use cairo::{Context, ImageSurface, Rectangle};
-use gio::MemoryInputStream;
+use gio::{MemoryInputStream, NONE_CANCELLABLE, NONE_FILE};
 use glib::Bytes;
 use librsvg::IntrinsicDimensions;
 
 #[derive(std::fmt::Debug, std::cmp::PartialEq)]
 pub enum SvgToPngConversionError {
+    ImageContextCreationFailure,
     ImageSurfaceCreationFailure,
     SvgBytesProcessingFailure,
     SvgHandleCreationFailure,
@@ -51,21 +52,19 @@ pub(super) fn convert_svg_to_png<S: SvgProcessor>(
     badge_style: BadgeStyle,
     svg_processor: S,
 ) -> Result<Vec<u8>, SvgToPngConversionError> {
-    let stream = MemoryInputStream::new_from_bytes(&get_bytes_stream(
-        svg_bytes,
-        &badge_style,
-        &svg_processor,
-    )?);
+    use SvgToPngConversionError::*;
+    let stream =
+        MemoryInputStream::from_bytes(&get_bytes_stream(svg_bytes, &badge_style, &svg_processor)?);
     let handle = Loader::new()
-        .read_stream(&stream, None::<&gio::File>, None::<&gio::Cancellable>)
-        .map_err(|_| SvgToPngConversionError::SvgHandleCreationFailure)?;
+        .read_stream(&stream, NONE_FILE, NONE_CANCELLABLE)
+        .map_err(|_| SvgHandleCreationFailure)?;
 
     let renderer = CairoRenderer::new(&handle);
     let (width, height) = get_dimensions(&renderer);
     let surface = ImageSurface::create(cairo::Format::ARgb32, width as i32, height as i32)
-        .map_err(|_| SvgToPngConversionError::ImageSurfaceCreationFailure)?;
+        .map_err(|_| ImageSurfaceCreationFailure)?;
 
-    let context = Context::new(&surface);
+    let context = Context::new(&surface).map_err(|_| ImageContextCreationFailure)?;
     let cr = Rectangle {
         x: 0.0,
         y: 0.0,
@@ -74,12 +73,12 @@ pub(super) fn convert_svg_to_png<S: SvgProcessor>(
     };
     renderer
         .render_document(&context, &cr)
-        .map_err(|_| SvgToPngConversionError::SvgRenderingError)?;
+        .map_err(|_| SvgRenderingError)?;
 
     let mut png_stream = Vec::new();
     surface
         .write_to_png(&mut png_stream)
-        .map_err(|_| SvgToPngConversionError::PngCreationError)?;
+        .map_err(|_| PngCreationError)?;
 
     Ok(png_stream)
 }
