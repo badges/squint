@@ -11,12 +11,12 @@ cairo-rs = { version = "0.14.7", features = ["png"] }
 cfg-if = "1.0.0"
 gio = { version = "0.14.6", features = ["v2_50"] }
 glib = { version = "0.14.5", features = ["v2_50"] }
-hyper = "0.13.7"
+hyper = { version = "0.14.13", features = ["http2", "server"] }
 lazy_static = "1.4.0"
 librsvg = { git = "https://gitlab.gnome.org/GNOME/librsvg", version = "2.52.1" }
 quick-xml = "0.22.0"
 reqwest = { version = "0.11.4", features = ["default-tls"] }
-tokio = { version = "0.2.21", features = ["macros", "rt-threaded"] }
+tokio = { version = "1.12.0", features = ["macros", "rt-multi-thread"] }
 url = "2.2.2"
 
 [dev-dependencies]
