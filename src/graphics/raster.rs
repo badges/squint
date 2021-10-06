@@ -94,7 +94,16 @@ mod librsvg_imports {
             mock! {
                 pub Loader {
                     pub fn new() -> Self;
-                    pub fn read_stream<S: glib::IsA<gio::InputStream>, F: glib::IsA<gio::File>, P: glib::IsA<gio::Cancellable>>(&self, stream: &S, base_file: Option<&'static F>, cancellable: Option<&'static P>) -> Result<SvgHandle, LoadingError>;
+                    pub fn read_stream<S, F, P>(
+                        &self,
+                        stream: &S,
+                        base_file: Option<&'static F>,
+                        cancellable: Option<&'static P>
+                    ) -> Result<SvgHandle, LoadingError>
+                    where
+                        S: glib::IsA<gio::InputStream>,
+                        F: glib::IsA<gio::File>,
+                        P: glib::IsA<gio::Cancellable>;
                 }
             }
             pub(super) use MockLoader as Loader;
@@ -102,7 +111,11 @@ mod librsvg_imports {
                 pub CairoRenderer {
                     pub fn new(handle: &librsvg::SvgHandle) -> Self;
                     pub fn intrinsic_dimensions(&self) -> librsvg::IntrinsicDimensions;
-                    pub fn render_document(&self, ctx: &Context, cr: &Rectangle) -> Result<(), librsvg::RenderingError>;
+                    pub fn render_document(
+                        &self,
+                        ctx: &Context,
+                        cr: &Rectangle
+                    ) -> Result<(), librsvg::RenderingError>;
                     pub fn with_dpi(&self, x: f64, y: f64) -> Self;
                 }
             }
