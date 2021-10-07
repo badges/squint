@@ -68,7 +68,9 @@ impl LetterSpacingSvgProcessor {
         reader.trim_text(true);
         let mut writer = Writer::new(Cursor::new(Vec::new()));
         let mut buf = Vec::new();
-        // TODO - insert link to Shields.io source where this is set
+        // Note that the SVGs use a 10% scale factor, so we apply that to the 1.25 SVG
+        // value to get the 12.5 value below.
+        // https://github.com/badges/shields/blob/0ce98396d75ff032aa8c7f0f7966c334a0c69ee4/badge-maker/lib/badge-renderers.js#L769
         let letter_spacing = "12.5";
 
         loop {
