@@ -1,4 +1,5 @@
-use hyper::header::{HeaderMap, HeaderName, CONTENT_TYPE};
+use hyper::body::HttpBody;
+use hyper::header::{HeaderMap, HeaderName, HeaderValue, CONTENT_LENGTH, CONTENT_TYPE};
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Method, Request, Response, Server};
 use reqwest::Client;
@@ -96,6 +97,7 @@ async fn rasterize(
     http_client: Client,
     svg_base_url: &'static str,
     invalid_svg_badge: &'static [u8],
+    include_body: bool,
 ) -> Result<Response<Body>, hyper::http::Error> {
     let (mut svg_res_headers, svg_status, svg_bytes, badge_style) =
         match get_svg(req, http_client, svg_base_url).await {
@@ -130,7 +132,16 @@ async fn rasterize(
         }
     };
 
-    res.status(res_status).body(Body::from(png_stream))
+    let body = Body::from(png_stream);
+
+    if include_body {
+        res.status(res_status).body(body)
+    } else {
+        if let Some(length) = body.size_hint().exact() {
+            res_headers.insert(CONTENT_LENGTH, HeaderValue::from(length));
+        }
+        res.status(res_status).body(Body::empty())
+    }
 }
 
 async fn route(
@@ -150,7 +161,12 @@ async fn route(
             .status(200)
             .header(hyper::header::CONTENT_TYPE, "application/json")
             .body(Body::from(HEALTH_CHECK_BODY)),
-        (&Method::GET, _) => rasterize(req, http_client, svg_base_url, invalid_svg_badge).await,
+        (&Method::GET, _) => {
+            rasterize(req, http_client, svg_base_url, invalid_svg_badge, true).await
+        }
+        (&Method::HEAD, _) => {
+            rasterize(req, http_client, svg_base_url, invalid_svg_badge, false).await
+        }
         // GET is the only supported HTTP Verb at this time, and a GET request with an invalid badge route
         // will be handled by the above arm with a 404 response code. This arm just handles unsupported verbs.
         (_, _) => Response::builder().status(405).body(Body::empty()),
