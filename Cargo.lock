@@ -17,7 +17,7 @@ version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ee49baf6cb617b853aa8d93bf420db2383fab46d314482ca2803b40d5fde979b"
 dependencies = [
- "winapi 0.3.9",
+ "winapi",
 ]
 
 [[package]]
@@ -43,7 +43,7 @@ checksum = "d9b39be18770d11421cdb1b9947a45dd3f37e93092cbf377614828a319d5fee8"
 dependencies = [
  "hermit-abi",
  "libc",
- "winapi 0.3.9",
+ "winapi",
 ]
 
 [[package]]
@@ -102,9 +102,9 @@ checksum = "c4872d67bab6358e59559027aa3b9157c53d9358c51423c17554809a8858e0f8"
 
 [[package]]
 name = "cairo-rs"
-version = "0.14.7"
+version = "0.14.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9164355c892b026d6257e696dde5f3cb39beb3718297f0f161b562fe2ee3ab86"
+checksum = "33b5725979db0c586d98abad2193cdb612dd40ef95cd26bd99851bf93b3cb482"
 dependencies = [
  "bitflags",
  "cairo-sys-rs",
@@ -170,7 +170,7 @@ dependencies = [
  "num-integer",
  "num-traits",
  "time",
- "winapi 0.3.9",
+ "winapi",
 ]
 
 [[package]]
@@ -593,7 +593,7 @@ dependencies = [
  "gobject-sys",
  "libc",
  "system-deps",
- "winapi 0.3.9",
+ "winapi",
 ]
 
 [[package]]
