@@ -15,7 +15,7 @@ hyper = { version = "0.14.16", features = ["http2", "server"] }
 lazy_static = "1.4.0"
 librsvg = { git = "https://gitlab.gnome.org/GNOME/librsvg", version = "2.52.1" }
 quick-xml = "0.22.0"
-reqwest = { version = "0.11.8", features = ["default-tls"] }
+reqwest = { version = "0.11.9", features = ["default-tls"] }
 tokio = { version = "1.15.0", features = ["macros", "rt-multi-thread"] }
 url = "2.2.2"
 
