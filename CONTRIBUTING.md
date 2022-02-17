@@ -27,7 +27,7 @@ Squint development tasks/activities utilize canonical [cargo](https://github.com
 - `cargo test` - runs the automated tests
 - `cargo run` - used to start the application, though we encourage using docker to run the application locally to mirror production, see [below documentation for running the application](#running-the-application-locally)
 - `cargo fmt` - rewrites the code to comply with formatting rules
-- `cargo fmt -- --check` - checks if the current code formatting complies with formatting rules
+- `cargo fmt --check` - checks if the current code formatting complies with formatting rules (N.B. if you are using rust 1.57 or earlier you'll have to use the longer form of `cargo fmt -- --check`)
 - `cargo clippy` - runs the linter
 - `cargo clippy --all-targets -- -D warnings` - runs the linter with the full rule set
 
