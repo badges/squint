@@ -7,13 +7,13 @@ publish = false
 license = "Apache-2.0 or MIT"
 
 [dependencies]
-cairo-rs = { version = "0.14.9", features = ["png"] }
+cairo-rs = { version = "0.15.1", features = ["png"] }
 cfg-if = "1.0.0"
-gio = { version = "0.14.8", features = ["v2_50"] }
-glib = { version = "0.14.8", features = ["v2_50"] }
+gio = { version = "0.15.2", features = ["v2_50"] }
+glib = { version = "0.15.2", features = ["v2_50"] }
 hyper = { version = "0.14.18", features = ["http2", "server"] }
 lazy_static = "1.4.0"
-librsvg = { git = "https://gitlab.gnome.org/GNOME/librsvg", version = "2.52.1" }
+librsvg = { git = "https://gitlab.gnome.org/GNOME/librsvg", version = "2.52.2" }
 quick-xml = "0.22.0"
 reqwest = { version = "0.11.10", features = ["default-tls"] }
 tokio = { version = "1.16.1", features = ["macros", "rt-multi-thread"] }
