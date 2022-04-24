@@ -5,7 +5,7 @@ use crate::badge::BadgeStyle;
 // for tests
 use self::librsvg_imports::{CairoRenderer, Loader};
 use cairo::{Context, ImageSurface, Rectangle};
-use gio::{MemoryInputStream, NONE_CANCELLABLE, NONE_FILE};
+use gio::{Cancellable, File, MemoryInputStream};
 use glib::Bytes;
 use librsvg::IntrinsicDimensions;
 
@@ -21,15 +21,9 @@ pub enum SvgToPngConversionError {
 
 // Returns tuple with (width, height)
 fn get_dimensions(renderer: &CairoRenderer) -> (f64, f64) {
-    let IntrinsicDimensions {
-        width: width_dim,
-        height: height_dim,
-        ..
-    } = renderer.intrinsic_dimensions();
-    let width = width_dim.map_or(0f64, |w| w.length);
-    let height = height_dim.map_or(0f64, |h| h.length);
+    let IntrinsicDimensions { width, height, .. } = renderer.intrinsic_dimensions();
 
-    (width, height)
+    (width.length, height.length)
 }
 
 fn get_bytes_stream<S: SvgProcessor>(
@@ -56,7 +50,7 @@ pub(super) fn convert_svg_to_png<S: SvgProcessor>(
     let stream =
         MemoryInputStream::from_bytes(&get_bytes_stream(svg_bytes, &badge_style, &svg_processor)?);
     let handle = Loader::new()
-        .read_stream(&stream, NONE_FILE, NONE_CANCELLABLE)
+        .read_stream(&stream, File::NONE, Cancellable::NONE)
         .map_err(|_| SvgHandleCreationFailure)?;
 
     let renderer = CairoRenderer::new(&handle);

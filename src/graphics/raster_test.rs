@@ -8,14 +8,19 @@ mod get_dimensions_tests {
     use super::{get_dimensions, CairoRenderer as MockCairoRenderer};
     use librsvg::{IntrinsicDimensions, Length, LengthUnit};
 
+    const ZERO_LENGTH: Length = Length {
+        length: 0f64,
+        unit: LengthUnit::Px,
+    };
+
     #[test]
     fn handles_zero_dimensions() {
         let mut mock_renderer = MockCairoRenderer::default();
         mock_renderer
             .expect_intrinsic_dimensions()
             .return_const(IntrinsicDimensions {
-                width: None,
-                height: None,
+                width: ZERO_LENGTH,
+                height: ZERO_LENGTH,
                 vbox: None,
             });
         let (width, height) = get_dimensions(&mock_renderer);
@@ -30,11 +35,11 @@ mod get_dimensions_tests {
         mock_renderer
             .expect_intrinsic_dimensions()
             .return_const(IntrinsicDimensions {
-                width: Some(Length {
+                width: Length {
                     length: exp_width,
                     unit: LengthUnit::Px,
-                }),
-                height: None,
+                },
+                height: ZERO_LENGTH,
                 vbox: None,
             });
         let (width, height) = get_dimensions(&mock_renderer);
@@ -49,11 +54,11 @@ mod get_dimensions_tests {
         mock_renderer
             .expect_intrinsic_dimensions()
             .return_const(IntrinsicDimensions {
-                width: None,
-                height: Some(Length {
+                width: ZERO_LENGTH,
+                height: Length {
                     length: exp_height,
                     unit: LengthUnit::Px,
-                }),
+                },
                 vbox: None,
             });
         let (width, height) = get_dimensions(&mock_renderer);
