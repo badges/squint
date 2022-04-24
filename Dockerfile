@@ -1,15 +1,31 @@
 ARG SERVER_BINARY_NAME=squint
 ARG CARGO_BUILD_MODE=debug
+ARG RUST_VERSION=1.60.0
 
-FROM rust:1.55.0 as builder
+FROM buildpack-deps:jammy as builder
 ARG SERVER_BINARY_NAME
 ARG CARGO_BUILD_MODE
+ARG RUST_VERSION
 
 RUN if [ "$CARGO_BUILD_MODE" != "release" ] && [ "$CARGO_BUILD_MODE" != "debug" ]; then \
       echo "Invalid value for CARGO_BUILD_MODE build arg: '$CARGO_BUILD_MODE'. Must be 'debug' or 'release'" \
       exit 1; \
     fi
-RUN apt update && apt install -y libgtk-3-dev
+RUN apt update
+RUN apt install -y \
+  libgtk-3-dev \
+  build-essential \
+  libssl-dev \
+  openssl \
+  pkg-config\
+  curl
+RUN apt update
+
+ENV CARGO_HOME=/usr/local/cargo \
+  PATH=/usr/local/cargo/bin:$PATH \
+  RUST_VERSION=${RUST_VERSION}
+
+RUN curl https://sh.rustup.rs -sSf | bash -s -- -y --profile minimal --default-toolchain ${RUST_VERSION}
 
 WORKDIR /usr/src/${SERVER_BINARY_NAME}
 # Leverage docker build cache for dependencies
@@ -32,7 +48,7 @@ RUN ./reset.sh ${CARGO_BUILD_MODE} ${SERVER_BINARY_NAME}
 COPY . .
 RUN ./build.sh ${CARGO_BUILD_MODE}
 
-FROM ubuntu:focal
+FROM ubuntu:jammy
 ARG SERVER_BINARY_NAME
 ARG CARGO_BUILD_MODE
 ENV SERVER_BINARY_NAME=${SERVER_BINARY_NAME}
