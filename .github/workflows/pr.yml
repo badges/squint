@@ -29,9 +29,23 @@ jobs:
   lint:
     name: lint
     runs-on: ubuntu-latest
+    container:
+      image: buildpack-deps:jammy
+
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+
+      - name: Install tools
+        run: |
+          apt update
+          apt install -y \
+            libgtk-3-dev \
+            build-essential \
+            libssl-dev \
+            openssl \
+            pkg-config\
+            curl
 
       - name: Install Rust
         uses: actions-rs/toolchain@v1
@@ -39,9 +53,6 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
-
-      - name: Install tools
-        run: sudo apt update && sudo apt install libgtk-3-dev -y
 
       - name: Add clippy
         run: rustup component add clippy
@@ -52,9 +63,22 @@ jobs:
   tests:
     name: tests
     runs-on: ubuntu-latest
+    container:
+      image: buildpack-deps:jammy
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+
+      - name: Install tools
+        run: |
+          apt update
+          apt install -y \
+            libgtk-3-dev \
+            build-essential \
+            libssl-dev \
+            openssl \
+            pkg-config\
+            curl
 
       - name: Install Rust
         uses: actions-rs/toolchain@v1
@@ -62,9 +86,6 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
-
-      - name: Install tools
-        run: sudo apt update && sudo apt install libgtk-3-dev -y
 
       # TODO: incorporate code coverage with tarpaulin or grcov
       - name: Run tests
@@ -76,9 +97,22 @@ jobs:
   compile:
     name: build
     runs-on: ubuntu-latest
+    container:
+      image: buildpack-deps:jammy
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+
+      - name: Install tools
+        run: |
+          apt update
+          apt install -y \
+            libgtk-3-dev \
+            build-essential \
+            libssl-dev \
+            openssl \
+            pkg-config\
+            curl
 
       - name: Install Rust
         uses: actions-rs/toolchain@v1
@@ -86,9 +120,6 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
-
-      - name: Install tools
-        run: sudo apt update && sudo apt install libgtk-3-dev -y
 
       - name: Compile
         uses: actions-rs/cargo@v1
