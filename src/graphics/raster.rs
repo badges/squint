@@ -1,3 +1,6 @@
+use std::cmp::{Eq, PartialEq};
+use std::fmt::Debug;
+
 use super::{SvgProcessor, INVALID_SVG};
 use crate::badge::BadgeStyle;
 
@@ -9,7 +12,7 @@ use gio::{MemoryInputStream, NONE_CANCELLABLE, NONE_FILE};
 use glib::Bytes;
 use librsvg::IntrinsicDimensions;
 
-#[derive(std::fmt::Debug, std::cmp::PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum SvgToPngConversionError {
     ImageContextCreationFailure,
     ImageSurfaceCreationFailure,
