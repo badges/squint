@@ -1,6 +1,7 @@
 use super::convert_svg_to_png;
 use crate::badge::BadgeStyle;
 use quick_xml::events::{BytesStart, Event};
+use quick_xml::name::QName;
 use quick_xml::{Reader, Writer};
 use std::io::Cursor;
 
@@ -74,13 +75,13 @@ impl LetterSpacingSvgProcessor {
         let letter_spacing = "12.5";
 
         loop {
-            let event = reader.read_event(&mut buf).map_err(|_| ())?;
+            let event = reader.read_event_into(&mut buf).map_err(|_| ())?;
             match event {
-                Event::Start(ref e) if e.name() == b"text" => {
-                    let mut elem = BytesStart::borrowed(b"text", "text".len());
+                Event::Start(ref e) if e.name() == QName(b"text") => {
+                    let mut elem = BytesStart::from_content("text", "text".len());
                     let attrs = e
                         .attributes()
-                        .filter_map(|a| a.ok().filter(|a| a.key != b"textLength"))
+                        .filter_map(|a| a.ok().filter(|a| a.key != QName(b"textLength")))
                         .collect::<Vec<_>>();
                     elem.extend_attributes(attrs);
                     elem.push_attribute(("letter-spacing", letter_spacing));
