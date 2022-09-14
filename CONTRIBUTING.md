@@ -5,6 +5,7 @@ Thanks for your interest in contributing to Squint!
 There's three core components you'll need to have in your environment in order to work on the Squint codebase:
 
 - [Rust](https://rustup.rs/) (Be sure to use rustup and not a pre-installed package)
+  - MSRV (minimum supported Rust version) - 1.61 or a semi recent nightly
   - Contributors are encouraged to install the `clippy` and `rustfmt` components as well.
 - [Docker](https://docs.docker.com/get-docker/)
 - [GTK 3](https://www.gtk.org/docs/installations/) - *NB* you can skip this step if you are content to just build and run locally using Docker
