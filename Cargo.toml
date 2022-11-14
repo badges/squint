@@ -11,7 +11,7 @@ cairo-rs = { version = "0.14.9", features = ["png"] }
 cfg-if = "1.0.0"
 gio = { version = "0.14.8", features = ["v2_50"] }
 glib = { version = "0.14.8", features = ["v2_50"] }
-hyper = { version = "0.14.20", features = ["http2", "server"] }
+hyper = { version = "0.14.23", features = ["http2", "server"] }
 lazy_static = "1.4.0"
 librsvg = { git = "https://gitlab.gnome.org/GNOME/librsvg", version = "2.52.1" }
 quick-xml = "0.25.0"
