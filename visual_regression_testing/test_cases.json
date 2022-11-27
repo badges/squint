@@ -22,5 +22,9 @@
   {
     "url": "http://localhost:3001/badge/%E3%83%A9%E3%83%99%E3%83%AB-%E3%83%A1%E3%83%83%E3%82%BB%E3%83%BC%E3%82%B8-lightgrey.png",
     "filename": "ラベル-メッセージ-lightgrey.png"
+  },
+  {
+    "url": "http://localhost:3001/badge/foo-barfffffffffffffffffffffffffffffffffffffjfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff-orange.png?style=for-the-badge",
+    "filename": "FTB-foo-barfffffffffffffffffffffffffffffffffffffjfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff-orange.png"
   }
 ]
