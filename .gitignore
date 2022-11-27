@@ -1,3 +1,6 @@
 /target
 ra-*.log
 rls*.log
+visual_regression_testing/diffs
+visual_regression_testing/node_modules
+visual_regression_testing/test_images
