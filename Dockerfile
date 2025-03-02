@@ -37,6 +37,11 @@ ARG SERVER_BINARY_NAME
 ARG CARGO_BUILD_MODE
 ENV SERVER_BINARY_NAME=${SERVER_BINARY_NAME}
 
+ARG version=dev
+ENV DOCKER_SHIELDS_VERSION=$version
+LABEL version=$version
+LABEL fly.version=$version
+
 RUN echo "ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true" | debconf-set-selections
 RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections
 RUN apt update -y && apt install -y libgtk-3-dev ttf-mscorefonts-installer
