@@ -21,6 +21,9 @@ const FORWARDING_REQUEST_HEADERS: &[&str] =
     &["if-modified-since", "if-unmodified-since", "if-none-match"];
 const FORWARDING_RESPONSE_HEADERS: &[&str] = &["date", "cache-control", "expires", "last-modified"];
 
+const MIN_PIXEL_RATIO: u8 = 2;
+const MAX_PIXEL_RATIO: u8 = 4;
+
 fn get_badge_style(req: &Request<Body>) -> BadgeStyle {
     req.uri().query().map_or(BadgeStyle::Unspecified, |q| {
         form_urlencoded::parse(q.as_bytes())
@@ -41,16 +44,47 @@ fn get_badge_style(req: &Request<Body>) -> BadgeStyle {
     })
 }
 
+fn extract_pixel_ratio(query: Option<&str>) -> (u8, Option<String>) {
+    // If a valid `pixel_ratio` param is present, return it along with the query
+    // string with `pixel_ratio` removed (so it's not forwarded upstream).
+    // Otherwise return the default pixel ratio of 1 along with the remaining
+    // query string. The returned query is `None` when nothing is left to forward.
+    query.map_or((1, None), |q| {
+        let mut pixel_ratio = 1;
+        let mut serializer = form_urlencoded::Serializer::new(String::new());
+        let mut has_other = false;
+        for (k, v) in form_urlencoded::parse(q.as_bytes()) {
+            if k == "pixel_ratio" {
+                if let Ok(pr) = v.parse::<u8>() {
+                    if (MIN_PIXEL_RATIO..=MAX_PIXEL_RATIO).contains(&pr) {
+                        pixel_ratio = pr;
+                    }
+                }
+            } else {
+                serializer.append_pair(&k, &v);
+                has_other = true;
+            }
+        }
+        let new_query = if has_other {
+            Some(serializer.finish())
+        } else {
+            None
+        };
+        (pixel_ratio, new_query)
+    })
+}
+
 async fn get_svg(
     mut req: Request<Body>,
     http_client: Client,
     svg_base_url: &'static str,
-) -> Result<(HeaderMap, u16, Vec<u8>, BadgeStyle), ()> {
-    let svg_url = if let Some(path_and_query) = req.uri().path_and_query() {
-        let suffix = path_and_query.as_str().replace(".png", ".svg");
-        Cow::Owned(format!("{}{}", svg_base_url, suffix))
-    } else {
-        Cow::Borrowed(svg_base_url)
+) -> Result<(HeaderMap, u16, Vec<u8>, BadgeStyle, u8), ()> {
+    let (pixel_ratio, forwarded_query) = extract_pixel_ratio(req.uri().query());
+
+    let svg_path = req.uri().path().replace(".png", ".svg");
+    let svg_url = match forwarded_query {
+        Some(query) => format!("{}{}?{}", svg_base_url, svg_path, query),
+        None => format!("{}{}", svg_base_url, svg_path),
     };
 
     let mut headers = HeaderMap::new();
@@ -83,7 +117,13 @@ async fn get_svg(
                     return Err(());
                 }
             };
-            Ok((headers, status, bytes.to_vec(), get_badge_style(&req)))
+            Ok((
+                headers,
+                status,
+                bytes.to_vec(),
+                get_badge_style(&req),
+                pixel_ratio,
+            ))
         }
         Err(e) => {
             eprintln!("Failed to fetch SVG data. Details: {:?}", e);
@@ -99,9 +139,11 @@ async fn rasterize(
     invalid_svg_badge: &'static [u8],
     include_body: bool,
 ) -> Result<Response<Body>, hyper::http::Error> {
-    let (mut svg_res_headers, svg_status, svg_bytes, badge_style) =
+    let (mut svg_res_headers, svg_status, svg_bytes, badge_style, pixel_ratio) =
         match get_svg(req, http_client, svg_base_url).await {
-            Ok((headers, status, data, style)) => (headers, status, data, style),
+            Ok((headers, status, data, style, pixel_ratio)) => {
+                (headers, status, data, style, pixel_ratio)
+            }
             Err(_) => {
                 return Response::builder()
                     .status(502)
@@ -124,13 +166,14 @@ async fn rasterize(
         return res.status(304).body(Body::empty());
     }
 
-    let (png_stream, res_status) = match convert_svg_to_png(Some(svg_bytes), badge_style) {
-        Ok(png_stream) => (Cow::Owned(png_stream), 200),
-        Err(e) => {
-            eprintln!("Failed to convert SVG to PNG. Details: {:?}", e);
-            (Cow::Borrowed(invalid_svg_badge), 502)
-        }
-    };
+    let (png_stream, res_status) =
+        match convert_svg_to_png(Some(svg_bytes), badge_style, pixel_ratio) {
+            Ok(png_stream) => (Cow::Owned(png_stream), 200),
+            Err(e) => {
+                eprintln!("Failed to convert SVG to PNG. Details: {:?}", e);
+                (Cow::Borrowed(invalid_svg_badge), 502)
+            }
+        };
 
     let body = Body::from(png_stream);
 
@@ -191,3 +234,7 @@ pub(crate) async fn start_server(
         .await?;
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "server_test.rs"]
+mod tests;

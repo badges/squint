@@ -23,14 +23,14 @@ pub enum SvgToPngConversionError {
 }
 
 // Returns tuple with (width, height)
-fn get_dimensions(renderer: &CairoRenderer) -> (f64, f64) {
+fn get_dimensions(renderer: &CairoRenderer, pixel_ratio: u8) -> (f64, f64) {
     let IntrinsicDimensions {
         width: width_dim,
         height: height_dim,
         ..
     } = renderer.intrinsic_dimensions();
-    let width = width_dim.map_or(0f64, |w| w.length);
-    let height = height_dim.map_or(0f64, |h| h.length);
+    let width = width_dim.map_or(0f64, |w| w.length * pixel_ratio as f64);
+    let height = height_dim.map_or(0f64, |h| h.length * pixel_ratio as f64);
 
     (width, height)
 }
@@ -54,6 +54,7 @@ pub(super) fn convert_svg_to_png<S: SvgProcessor>(
     svg_bytes: Option<Vec<u8>>,
     badge_style: BadgeStyle,
     svg_processor: S,
+    pixel_ratio: u8,
 ) -> Result<Vec<u8>, SvgToPngConversionError> {
     use SvgToPngConversionError::*;
     let stream =
@@ -63,7 +64,7 @@ pub(super) fn convert_svg_to_png<S: SvgProcessor>(
         .map_err(|_| SvgHandleCreationFailure)?;
 
     let renderer = CairoRenderer::new(&handle);
-    let (width, height) = get_dimensions(&renderer);
+    let (width, height) = get_dimensions(&renderer, pixel_ratio);
     let surface = ImageSurface::create(cairo::Format::ARgb32, width as i32, height as i32)
         .map_err(|_| ImageSurfaceCreationFailure)?;
 

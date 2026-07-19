@@ -12,6 +12,12 @@ mod test_data;
 pub fn convert_svg_to_png(
     svg_bytes: Option<Vec<u8>>,
     badge_style: BadgeStyle,
+    pixel_ratio: u8,
 ) -> Result<Vec<u8>, SvgToPngConversionError> {
-    raster::convert_svg_to_png(svg_bytes, badge_style, LetterSpacingSvgProcessor::new())
+    raster::convert_svg_to_png(
+        svg_bytes,
+        badge_style,
+        LetterSpacingSvgProcessor::new(),
+        pixel_ratio,
+    )
 }
