@@ -32,7 +32,7 @@ pub static INVALID_SVG: &[u8] = br##"<?xml version="1.0" encoding="UTF-8"?>
 
 lazy_static! {
     pub static ref INVALID_SVG_BADGE: Vec<u8> = {
-        match convert_svg_to_png(None, BadgeStyle::Unspecified) {
+        match convert_svg_to_png(None, BadgeStyle::Unspecified, 1) {
             Ok(png) => png,
             Err(_) => {
                 // This happens during server initialization, so if it fails

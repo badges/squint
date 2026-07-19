@@ -18,27 +18,27 @@ mod get_dimensions_tests {
                 height: None,
                 vbox: None,
             });
-        let (width, height) = get_dimensions(&mock_renderer);
+        let (width, height) = get_dimensions(&mock_renderer, 1);
         assert_eq!(width, 0f64);
         assert_eq!(height, 0f64);
     }
 
     #[test]
     fn provides_correct_width() {
-        let exp_width = 70.33f64;
+        let input_width = 70.33f64;
         let mut mock_renderer = MockCairoRenderer::default();
         mock_renderer
             .expect_intrinsic_dimensions()
             .return_const(IntrinsicDimensions {
                 width: Some(Length {
-                    length: exp_width,
+                    length: input_width,
                     unit: LengthUnit::Px,
                 }),
                 height: None,
                 vbox: None,
             });
-        let (width, height) = get_dimensions(&mock_renderer);
-        assert_eq!(width, exp_width);
+        let (width, height) = get_dimensions(&mock_renderer, 2);
+        assert_eq!(width, input_width * 2f64);
         assert_eq!(height, 0f64);
     }
 
@@ -56,7 +56,7 @@ mod get_dimensions_tests {
                 }),
                 vbox: None,
             });
-        let (width, height) = get_dimensions(&mock_renderer);
+        let (width, height) = get_dimensions(&mock_renderer, 1);
         assert_eq!(width, 0f64);
         assert_eq!(height, exp_height);
     }
